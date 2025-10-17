@@ -46,6 +46,7 @@ def clean_data(text):
 
 # Preprocess data, preparing it for model
 def preprocess_data(df, config):
+    # Apply Clean Data function to our comments
     df['comment'] = df['comment'].apply(clean_data)
 
     # Tokenize comments
