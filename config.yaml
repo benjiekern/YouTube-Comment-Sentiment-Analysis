@@ -1,0 +1,14 @@
+data:
+  path: ../data/YoutubeCommentsDataSet.csv
+  batch_size: 32
+  split_ratio: 0.8
+
+model:
+  embedding_dim: 128
+  hidden_dim: 64
+  dropout: 0.3
+
+training:
+  epochs: 10
+  learning_rate: 0.001
+  device: cuda
