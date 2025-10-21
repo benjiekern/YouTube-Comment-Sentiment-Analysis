@@ -1,5 +1,4 @@
 # Imports
-import numpy as np
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import *
@@ -7,9 +6,10 @@ import pandas as pd
 import re
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.utils import to_categorical
+import torch
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
+from transformers import AutoTokenizer
 import warnings
 import yaml
 
@@ -33,10 +33,11 @@ def load_data(config):
     df = df[~df.duplicated()]
     return df
 
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
 # Clean data
 def clean_data(text):
-    lemmatizer = WordNetLemmatizer()
-    stop_words = set(stopwords.words('english'))
     text = re.sub(r'[^\x00-\x7F]+', '', text)
     text = re.sub(r'[^A-Za-z\s]', '', text)
     tokens = text.split()
@@ -44,26 +45,50 @@ def clean_data(text):
     text = ' '.join(processed)
     return text.lower().strip()
 
-# Preprocess data, preparing it for model
-def preprocess_data(df, config):
-    # Apply Clean Data function to our comments
+# Preprocess data (clean data, encode labels, and split data into train and test sets)
+def preprocess_data(df):
     df['comment'] = df['comment'].apply(clean_data)
-
-    # Tokenize comments
-    tokenizer = Tokenizer(num_words=10000, oov_token="<OOV>")
-    X = df['comment']
-    tokenizer.fit_on_texts(X)
-    X = tokenizer.texts_to_sequences(X)
-    lengths = [len(sublist) for sublist in X]
-    max_len = int(np.percentile(lengths, 90))
-    X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
     le = LabelEncoder()
     y = le.fit_transform(df['sentiment'])
-    y = to_categorical(y)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-    y_train = np.argmax(y_train, axis=1)
-    y_test = np.argmax(y_test, axis=1)
-    return X_train, X_test, y_train, y_test
+    X_train, X_test, y_train, y_test = train_test_split(df['comment'], y, test_size=0.2, random_state=42)
+    return X_train.tolist(), X_test.tolist(), y_train, y_test
 
-reviews = load_data(config)
-X_train, X_test, y_train, y_test = preprocess_data(reviews, config)
+# Dataset for text classification tasks
+class TextDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_len):
+        self.texts = texts
+        self.labels = labels
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        text = str(self.texts[idx])
+        label = torch.tensor(self.labels[idx], dtype=torch.long)
+
+        encoding = self.tokenizer(
+            text,
+            add_special_tokens=True,
+            truncation=True,
+            padding="max_length",
+            return_tensors='pt'
+        )
+
+        return {
+            'input_ids': encoding['input_ids'].squeeze(),
+            'attention_mask': encoding['attention_mask'].squeeze(),
+            'label': label
+        }
+
+df = load_data(config)
+X_train, X_test, y_train, y_test = preprocess_data(df)
+
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+train_dataset = TextDataset(X_train, y_train, tokenizer, max_len=128)
+test_dataset = TextDataset(X_test, y_test, tokenizer, max_len=128)
+
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=16)
