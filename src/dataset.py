@@ -2,16 +2,10 @@
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import *
-import pandas as pd
 import re
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 import torch
-from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer
 import warnings
-import yaml
 
 # Disable Warnings
 warnings.filterwarnings('ignore')

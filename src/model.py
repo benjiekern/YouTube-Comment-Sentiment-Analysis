@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
+import yaml
+
+# Load in config file
+with open("../config.yaml") as f:
+    config = yaml.safe_load(f)
+
 
 # Sentiment Model
 class SentimentModel(nn.Module):
@@ -20,7 +23,7 @@ class SentimentModel(nn.Module):
         )
 
         # Fully connected layers
-        self.dropout = nn.Dropout(0.4)
+        self.dropout = nn.Dropout(config['model']['dropout'])
         self.fc = nn.Linear(lstm_units * 2, 64)
         self.relu = nn.ReLU()
         self.out = nn.Linear(64, 3)
