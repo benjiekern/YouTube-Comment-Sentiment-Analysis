@@ -11,6 +11,7 @@ from mlflow.entities import ViewType
 import mlflow.pytorch
 import model
 import numpy as np
+import os
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -23,7 +24,6 @@ with open("../config.yaml") as f:
 mlflow.set_tracking_uri("file:///C:/Users/Benji/PycharmProjects/YouTube-Comment-Sentiment-Analysis/mlruns")
 print("Tracking URI:", mlflow.get_tracking_uri())
 mlflow.set_experiment(config['data']['experiment_name'])
-
 client = MlflowClient()
 
 experiment = mlflow.get_experiment_by_name(config['data']['experiment_name'])
@@ -47,9 +47,12 @@ print("Best historical val_accuracy:", best_overall_val_accuracy)
 
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+
+# Global Variables
+TEMP_MODEL_PATH = 'models/saved_model'
 VOCAB_SIZE = tokenizer.vocab_size
 N_EPOCHS = config['training']['n_epochs']
-
 BATCH_SIZE = config['training']['batch_size']
 EMBED_SIZE = config['training']['embed_size']
 LSTM_UNITS = config['training']['lstm_units']
@@ -72,7 +75,7 @@ def preprocess_data(df):
     df['comment'] = df['comment'].apply(dataset.clean_data)
     le = LabelEncoder()
     y = le.fit_transform(df['sentiment'])
-    X_train, X_test, y_train, y_test = train_test_split(df['comment'], y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(df['comment'], y, test_size=0.2)
     return X_train.tolist(), X_test.tolist(), y_train, y_test
 
 
@@ -136,12 +139,14 @@ def train_model(sentiment_model, train_loader, val_loader, criterion, optimizer,
         # Evaluate train loss, val loss, and val accuracy
         train_loss = running_loss / len(train_loader.dataset)
         val_loss, val_accuracy = evaluate.evaluate_model(sentiment_model, val_loader, criterion, device)
-        if val_accuracy > best_overall_val_accuracy:
-            best_overall_val_accuracy = val_accuracy
-            torch.save(sentiment_model.state_dict(), 'best_model.pt')
         if val_accuracy > best_val_accuracy:
             best_val_accuracy = val_accuracy
             trigger_times = 0
+            torch.save(sentiment_model.state_dict(), TEMP_MODEL_PATH)
+
+            if val_accuracy > best_overall_val_accuracy:
+                best_overall_val_accuracy = val_accuracy
+
         else:
             trigger_times += 1
             if trigger_times >= patience:
@@ -159,26 +164,27 @@ def train_model(sentiment_model, train_loader, val_loader, criterion, optimizer,
         mlflow.log_metric("val_loss", val_loss, step=epoch + 1)
         mlflow.log_metric("val_accuracy", val_accuracy, step=epoch + 1)
         mlflow.log_metric("val_accuracy_best_current_run", best_val_accuracy, step=epoch + 1)
-        mlflow.log_metric("val_accuracy_best_overall", best_overall_val_accuracy, step=epoch + 1)
+    return best_overall_val_accuracy
 
-
-mlflow.end_run()
-
-with mlflow.start_run():
+with mlflow.start_run() as run:
     mlflow.log_param("embed_size", EMBED_SIZE)
     mlflow.log_param("lstm_units", LSTM_UNITS)
     mlflow.log_param("batch_size", BATCH_SIZE)
     mlflow.log_param("n_epochs", N_EPOCHS)
     mlflow.log_param("vocab_size", VOCAB_SIZE)
 
-    train_model(sentiment_model, train_loader, val_loader, criterion, optimizer, N_EPOCHS, device, best_overall_val_accuracy)
+    tokenizer.save_pretrained("models/final_tokenizer_assets/")  # Save to a local folder first
+    mlflow.log_artifacts("models/final_tokenizer_assets/", artifact_path="tokenizer")
+
+
+    best_overall_val_accuracy = train_model(sentiment_model, train_loader, val_loader, criterion, optimizer, N_EPOCHS, device, best_overall_val_accuracy)
+    mlflow.log_metric("final_best_overall_accuracy", best_overall_val_accuracy)
 
     example_input = np.random.randint(0, 30000, (1, 128), dtype=np.int64)
-
+    sentiment_model.load_state_dict(torch.load(TEMP_MODEL_PATH))
     mlflow.pytorch.log_model(
         pytorch_model=sentiment_model.cpu(),
         name="yt_comments_model",
         input_example=example_input
     )
-
-mlflow.end_run()
+    os.remove(TEMP_MODEL_PATH)

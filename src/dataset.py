@@ -23,8 +23,7 @@ def clean_data(text):
     text = re.sub(r'[^A-Za-z\s]', '', text)
     tokens = text.split()
     processed = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
-    text = ' '.join(processed)
-    return text.lower().strip()
+    return ' '.join(processed).lower().strip()
 
 
 # Dataset for text classification tasks

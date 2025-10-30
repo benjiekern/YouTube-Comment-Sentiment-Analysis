@@ -1,7 +1,7 @@
 data:
   path: ../data/YoutubeCommentsDataSet.csv
   split_ratio: 0.8
-  experiment_name: sentiment_analysis_test_2
+  experiment_name: sentiment_analysis_test_4
 
 model:
   embedding_dim: 128
