@@ -39,7 +39,7 @@ for run in all_completed_runs:
     if "val_accuracy" in run.data.metrics:
         best_overall_val_accuracy = max(best_overall_val_accuracy,
                                         run.data.metrics["val_accuracy"],
-                                        run.data.metrics["val_accuracy_best_overall"]
+                                        run.data.metrics["final_best_overall_accuracy"]
         )
 
 
@@ -50,7 +50,7 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 
 # Global Variables
-TEMP_MODEL_PATH = 'models/saved_model'
+TEMP_MODEL_PATH = 'models/saved_model.pt'
 VOCAB_SIZE = tokenizer.vocab_size
 N_EPOCHS = config['training']['n_epochs']
 BATCH_SIZE = config['training']['batch_size']
@@ -180,11 +180,13 @@ with mlflow.start_run() as run:
     best_overall_val_accuracy = train_model(sentiment_model, train_loader, val_loader, criterion, optimizer, N_EPOCHS, device, best_overall_val_accuracy)
     mlflow.log_metric("final_best_overall_accuracy", best_overall_val_accuracy)
 
-    example_input = np.random.randint(0, 30000, (1, 128), dtype=np.int64)
     sentiment_model.load_state_dict(torch.load(TEMP_MODEL_PATH))
+
+    example_input = torch.randint(0, VOCAB_SIZE, (1, 128), dtype=torch.int64).numpy()
     mlflow.pytorch.log_model(
         pytorch_model=sentiment_model.cpu(),
         name="yt_comments_model",
-        input_example=example_input
+        input_example=example_input,
+        registered_model_name="YT_Sentiment_Model_LSTM"
     )
     os.remove(TEMP_MODEL_PATH)
