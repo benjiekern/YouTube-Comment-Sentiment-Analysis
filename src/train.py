@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from transformers import AutoTokenizer
 
-import dataset
+import data_utils
 import evaluate
 import mlflow
 from mlflow.entities import ViewType
@@ -72,7 +72,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 
 
 def preprocess_data(df):
-    df['comment'] = df['comment'].apply(dataset.clean_data)
+    df['comment'] = df['comment'].apply(data_utils.clean_data)
     le = LabelEncoder()
     y = le.fit_transform(df['sentiment'])
     X_train, X_test, y_train, y_test = train_test_split(df['comment'], y, test_size=0.2)
@@ -92,8 +92,8 @@ def load_data(config):
 df = load_data(config)
 X_train, X_test, y_train, y_test = preprocess_data(df)
 
-train_data = dataset.TextDataset(X_train, y_train, tokenizer, 128)
-val_data = dataset.TextDataset(X_test, y_test, tokenizer, 128)
+train_data = data_utils.TextDataset(X_train, y_train, tokenizer, 128)
+val_data = data_utils.TextDataset(X_test, y_test, tokenizer, 128)
 
 # Dataloaders for batching
 train_loader = DataLoader(

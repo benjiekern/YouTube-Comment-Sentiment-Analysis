@@ -1,9 +1,13 @@
+from pathlib import Path
 import torch
 import torch.nn as nn
 import yaml
 
-# Load in config file
-with open("../config.yaml") as f:
+
+MODEL_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = MODEL_DIR.parent / "config.yaml"
+
+with open(CONFIG_PATH) as f:
     config = yaml.safe_load(f)
 
 

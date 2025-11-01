@@ -11,8 +11,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Downloads
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+# nltk.download('wordnet')
+# nltk.download('omw-1.4')
 
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
