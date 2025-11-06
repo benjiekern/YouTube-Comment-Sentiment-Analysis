@@ -35,7 +35,7 @@ class TextInput(BaseModel):
 @app.post("/predict")
 def predict_sentiment(text: TextInput):
     cleaned_text = dataset.clean_data(text.text)
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)
+    inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True).to(device)
 
     input_ids = inputs['input_ids']
 
