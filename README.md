@@ -3,8 +3,13 @@
 
 This is a project I created to familiarize myself with MLOps. It is a highly available, low-latency API for real-time sentiment analysis, containerized with Docker and deployed to a secure, scalable production environment on AWS ECS Fargate.
 
+# Demo Status: Retired to Control Costs
 
-# Live Demo
+To maintain cost-efficiency, the live demo of this project previously running on **AWS ECS Fargate has been decommissioned** (shutdown).
+
+The infrastructure components, including the Application Load Balancer (ALB) and ECS service, are no longer active, but the code and documentation remain to showcase the completed MLOps deployment pipeline.
+
+## Demo Archive (Links and commands are no longer active)
 
 The model is deployed to an internet-facing Application Load Balancer (ALB) and is ready for real-time inference requests. Note: For initial testing, please ensure your request is sent over HTTP (Port 80). Health Check: 
 
